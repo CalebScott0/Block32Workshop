@@ -76,6 +76,7 @@ server.post("/api/flavors", async (req, res, next) => {
 server.get("/api/flavors", async (req, res, next) => {
   try {
     const SQL = `SELECT * from flavors ORDER BY created_at DESC`;
+    // await response from client querying the database
     const response = await client.query(SQL);
     res.send(response.rows);
   } catch (error) {
@@ -96,8 +97,28 @@ server.get("/api/flavors/:id", async (req, res, next) => {
 
 server.put("/api/flavors/:id", async (req, res, next) => {
   try {
-    const SQL = ``;
-    const response = await client.query(SQL);
+    const { name, is_favorite } = req.body;
+    let SQL = ``;
+    let response = ``;
+    if (!name && is_favorite == null) {
+      /* send response with status code of 400 Bad Request 
+              and message letting user know what the problem is */
+      return res
+        .status(400)
+        .send({ message: "Please edit the name or favorite status" });
+    }
+    if (name && is_favorite != null) {
+      SQL = `UPDATE flavors set name=$1, is_favorite=$2, updated_at=now() WHERE id=$3 RETURNING *`;
+      response = await client.query(SQL, [name, is_favorite, req.params.id]);
+    } else if (!name) {
+      SQL = `UPDATE flavors set is_favorite=$1, updated_at=now() WHERE id=$2 RETURNING *`;
+      response = await client.query(SQL, [is_favorite, req.params.id]);
+    } 
+    else {
+      SQL = `UPDATE flavors set name=$1, updated_at=now() WHERE id=$2 RETURNING *`;
+      response = await client.query(SQL, [name, req.params.id]);
+    }
+
     res.send(response.rows[0]);
   } catch (error) {
     next(error);
